@@ -1,0 +1,75 @@
+steps:
+  # Build the Flask app Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/optimum-task-429215-h2/flask-app:$SHORT_SHA",
+        "./pythonmicroservice/flask-app",
+      ]
+
+  # Push the Flask app Docker image to Google Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/optimum-task-429215-h2/flask-app:$SHORT_SHA"]
+
+  # Apply the Flask app deployment
+  - name: "gcr.io/cloud-builders/kubectl"
+    args: ["apply", "-f", "pythonmicroservice/kubernetes/flask-deployment.yaml"]
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=us-central1"
+      - "CLOUDSDK_CONTAINER_CLUSTER=autopilot-cluster-1"
+
+  # Build the React app Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/optimum-task-429215-h2/react-app:$SHORT_SHA",
+        "./pythonmicroservice/react-app",
+      ]
+
+  # Push the React app Docker image to Google Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/optimum-task-429215-h2/react-app:$SHORT_SHA"]
+
+  # Apply the React app deployment
+  - name: "gcr.io/cloud-builders/kubectl"
+    args: ["apply", "-f", "pythonmicroservice/kubernetes/react-deployment.yaml"]
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=us-central1"
+      - "CLOUDSDK_CONTAINER_CLUSTER=autopilot-cluster-1"
+
+  # Update the image for the Flask app deployment
+  - name: "gcr.io/cloud-builders/kubectl"
+    args:
+      [
+        "set",
+        "image",
+        "deployment/flask-app",
+        "flask-app=gcr.io/optimum-task-429215-h2/flask-app:$SHORT_SHA",
+      ]
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=us-central1"
+      - "CLOUDSDK_CONTAINER_CLUSTER=autopilot-cluster-1"
+
+  # Update the image for the React app deployment
+  - name: "gcr.io/cloud-builders/kubectl"
+    args:
+      [
+        "set",
+        "image",
+        "deployment/react-app",
+        "react-app=gcr.io/optimum-task-429215-h2/react-app:$SHORT_SHA",
+      ]
+    env:
+      - "CLOUDSDK_COMPUTE_ZONE=us-central1"
+      - "CLOUDSDK_CONTAINER_CLUSTER=autopilot-cluster-1"
+images:
+  - gcr.io/optimum-task-429215-h2/flask-app:$SHORT_SHA
+  - gcr.io/optimum-task-429215-h2/react-app:$SHORT_SHA
+
+# Define the build logging behavior
+options:
+  logging: CLOUD_LOGGING_ONLY
